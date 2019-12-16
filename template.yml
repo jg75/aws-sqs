@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SQS Event Source Mapping
+  
+Globals:
+  Function:
+    Timeout: 3
+
+Parameters:
+  DeploymentStage:
+    Description: The deployment stage
+    Type: String
+    Default: jimdev
+
+Resources:
+  SqsQueue:
+    Type: AWS::SQS::Queue 
+    Properties:
+      QueueName: !Sub ${DeploymentStage}-queue
+
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${DeploymentStage}-consumer-output
+
+  LambdaSQSConsumer:
+    Type: AWS::Serverless::Function 
+    Properties: !Sub ${DeploymentStage}-consumer-function
+      FunctionName: 
+      CodeUri: consumer/
+      Handler: lambda_handler.handler
+      Runtime: python3.7
+      Environment:
+        Variables:
+          S3_BUCKET: !Ref S3Bucket
+      Events:
+        Stream:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt SqsQueue.Arn
+            BatchSize: 10
+
+Outputs:
+  LambdaConsumer:
+    Description: Lambda SQS Queue Consumer
+    Value: !GetAtt LambdaSQSConsumer.Arn
+
+  LambdaConsumerIamRole:
+    Description: Lambda SQS Queue Consumer Iam Role
+    Value: !GetAtt LambdaSQSConsumerRole.Arn
+
+  Queue:
+    Description: Lambda SQS Queue 
+    Value: !Ref SqsQueue
+
+  S3Bucket:
+    Description: S3 Bucket
+    Value: !Ref S3Bucket
