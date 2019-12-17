@@ -6,30 +6,27 @@ Globals:
   Function:
     Timeout: 3
 
-Parameters:
-  DeploymentStage:
-    Description: The deployment stage
-    Type: String
-    Default: jimdev
-
 Resources:
   SqsQueue:
     Type: AWS::SQS::Queue 
     Properties:
-      QueueName: !Sub ${DeploymentStage}-queue
+      QueueName: !Sub ${AWS::StackName}-queue
 
   S3Bucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub ${DeploymentStage}-consumer-output
+      BucketName: !Sub ${AWS::StackName}-consumer-output
 
   LambdaSQSConsumer:
     Type: AWS::Serverless::Function 
-    Properties: !Sub ${DeploymentStage}-consumer-function
-      FunctionName: 
+    Properties: 
+      FunctionName: !Sub ${AWS::StackName}-consumer-function
       CodeUri: consumer/
-      Handler: lambda_handler.handler
+      Handler: app.handler
       Runtime: python3.7
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref S3Bucket
       Environment:
         Variables:
           S3_BUCKET: !Ref S3Bucket
