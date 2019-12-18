@@ -1,21 +1,38 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: SQS Event Source Mapping
-  
+
 Globals:
   Function:
-    Timeout: 3
+    Handler: app.handler
+    Runtime: python3.7
+  
+Parameters:
+  ApplicationName:
+    Description: The application name
+    Type: String
+    Default: jsqs
+
+  Alias:
+    Description: The function version alias
+    Type: String
+    Default: prod
+
+  CanaryMessageCount:
+    Description: The number of messages for the canary test
+    Type: String
+    Default: 100
 
 Resources:
   SqsDeadLetterQueue:
     Type: AWS::SQS::Queue 
     Properties:
-      QueueName: !Sub ${AWS::StackName}-dead-letter-queue
+      QueueName: !Sub ${ApplicationName}-${Alias}-dead-letter-queue
 
   SqsQueue:
     Type: AWS::SQS::Queue 
     Properties:
-      QueueName: !Sub ${AWS::StackName}-queue
+      QueueName: !Sub ${ApplicationName}-${Alias}-queue
       RedrivePolicy:
         deadLetterTargetArn: !GetAtt SqsDeadLetterQueue.Arn
         maxReceiveCount: 3
@@ -23,21 +40,25 @@ Resources:
   S3Bucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub ${AWS::StackName}-consumer-output
+      BucketName: !Sub ${ApplicationName}-${Alias}-consumer-output
 
   LambdaSQSConsumer:
     Type: AWS::Serverless::Function 
     Properties: 
-      FunctionName: !Sub ${AWS::StackName}-consumer-function
+      FunctionName: !Sub ${ApplicationName}-${Alias}-consumer-function
+      Description: Lambda SQS Consumer
       CodeUri: consumer/
-      Handler: app.handler
-      Runtime: python3.7
+      AutoPublishAlias: !Ref Alias
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref S3Bucket
       Environment:
         Variables:
           S3_BUCKET: !Ref S3Bucket
+      DeploymentPreference:
+        Type: Canary10Percent5Minutes
+        Hooks:
+          PreTraffic: !Ref LambdaSQSCanary
       Events:
         Stream:
           Type: SQS
@@ -45,14 +66,39 @@ Resources:
             Queue: !GetAtt SqsQueue.Arn
             BatchSize: 10
 
+  LambdaSQSCanary:
+    Type: AWS::Serverless::Function 
+    Properties: 
+      FunctionName: !Sub ${ApplicationName}-${Alias}-canary-function
+      Description: Lambda SQS Consumer Canary
+      CodeUri: canary/
+      Policies:
+        - Version: "2012-10-17"
+          Statement: 
+          - Effect: "Allow"
+            Action: 
+              - "codedeploy:PutLifecycleEventHookExecutionStatus"
+            Resource:
+              !Sub "arn:aws:codedeploy:${AWS::Region}:${AWS::AccountId}:deploymentgroup:${ServerlessDeploymentApplication}/*"
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt SqsQueue.QueueName
+      Environment:
+        Variables:
+          QUEUE_URL: !Ref SqsQueue
+          MESSAGE_COUNT: !Ref CanaryMessageCount
+          MESSAGE_BODY: !Sub "Canary ${ApplicationName}-${Alias}"
+      DeploymentPreference:
+        Enabled: false
+      Timeout: 15
+
 Outputs:
   LambdaConsumer:
     Description: Lambda SQS Queue Consumer
     Value: !GetAtt LambdaSQSConsumer.Arn
 
-  LambdaConsumerIamRole:
-    Description: Lambda SQS Queue Consumer Iam Role
-    Value: !GetAtt LambdaSQSConsumerRole.Arn
+  LambdaCanary:
+    Description: Lambda SQS Queue Consumer Canary
+    Value: !GetAtt LambdaSQSCanary.Arn
 
   Queue:
     Description: Lambda SQS Queue 

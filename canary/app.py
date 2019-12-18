@@ -1,13 +1,16 @@
-"""AWS SQS message producer."""
+"""AWS SQS message canary."""
 from datetime import datetime
 from logging import getLogger, INFO, StreamHandler
-from sys import argv
+from os import getenv
 from uuid import uuid4
 
 from boto3 import client
 
 
 sqs_client = client("sqs")
+queue_url = getenv("QUEUE_URL")
+message_count = int(getenv("MESSAGE_COUNT", 100))
+message_body = getenv("MESSAGE_BODY")
 logger = getLogger("__name__")
 stream_handler = StreamHandler()
 
@@ -24,12 +27,9 @@ def generate_message_attributes():
     yield {"key": {"DataType": "String", "StringValue": f"{prefix}/{key}"}}
 
 
-def generate_messages(queue_name, message_body, count=100):
-    """Send messages with message attributes to a queue."""
-    response = sqs_client.get_queue_url(QueueName=queue_name)
-    queue_url = response["QueueUrl"]
-
-    for _ in range(count):
+def handler(event, context):
+    """Lambda handler for AWS SQS queue canary."""
+    for _ in range(message_count):
         response = sqs_client.send_message(
             QueueUrl=queue_url,
             MessageBody=message_body,
@@ -37,8 +37,3 @@ def generate_messages(queue_name, message_body, count=100):
         )
 
         logger.info(response)
-
-
-if __name__ == "__main__":
-    for queue_name in argv[1:]:
-        generate_messages(queue_name, "Message Body")

@@ -1,11 +1,9 @@
 """Fixtures for testing handlers."""
 from botocore.stub import Stubber
-
 import pytest
 
-
 import consumer.app
-import producer.app
+import canary.app
 
 
 @pytest.fixture()
@@ -17,24 +15,51 @@ def s3_stub(request):
 
 @pytest.fixture()
 def sqs_stub(request):
-    stub = Stubber(producer.app.sqs_client)
+    stub = Stubber(canary.app.sqs_client)
     request.addfinalizer(stub.assert_no_pending_responses)
     return stub
 
 
-@pytest.fixture()
-def queue_name():
-    return "test-queue"
+@pytest.fixture(autouse=True)
+def mock_sqs_queue_url(monkeypatch, request):
+    original_queue_url = canary.app.queue_url
+    mock_queue_url = "mock-queue-url"
+    monkeypatch.setattr(canary.app, "queue_url", mock_queue_url)
+
+    def _reset_queue_url():
+        monkeypatch.setattr(canary.app, "queue_url", original_queue_url)
+
+    request.addfinalizer(_reset_queue_url)
+
+    return mock_queue_url
 
 
-@pytest.fixture()
-def message():
-    return "Test Request"
+@pytest.fixture(autouse=True)
+def mock_message_count(monkeypatch, request):
+    original_message_count = canary.app.message_count
+    mock_message_count = 100
+    monkeypatch.setattr(canary.app, "message_count", mock_message_count)
+
+    def _reset_message_count():
+        monkeypatch.setattr(canary.app, "message_count", original_message_count)
+
+    request.addfinalizer(_reset_message_count)
+
+    return mock_message_count
 
 
-@pytest.fixture()
-def message_attributes():
-    return next(producer.app.generate_message_attributes())
+@pytest.fixture(autouse=True)
+def mock_message_body(monkeypatch, request):
+    original_message_body = canary.app.message_body
+    mock_message_body = "Unit Test Message"
+    monkeypatch.setattr(canary.app, "message_body", mock_message_body)
+
+    def _reset_message_body():
+        monkeypatch.setattr(canary.app, "message_body", original_message_body)
+
+    request.addfinalizer(_reset_message_body)
+
+    return mock_message_body
 
 
 @pytest.fixture(autouse=True)
@@ -49,6 +74,11 @@ def mock_s3_bucket(monkeypatch, request):
     request.addfinalizer(_reset_bucket)
 
     return mock_bucket
+
+
+@pytest.fixture()
+def message_attributes():
+    return next(canary.app.generate_message_attributes())
 
 
 @pytest.fixture()
@@ -67,6 +97,11 @@ def single_message_event(s3_key):
             }
         }]
     }
+
+
+@pytest.fixture()
+def event():
+    return {}
 
 
 @pytest.fixture()
