@@ -7,10 +7,18 @@ Globals:
     Timeout: 3
 
 Resources:
+  SqsDeadLetterQueue:
+    Type: AWS::SQS::Queue 
+    Properties:
+      QueueName: !Sub ${AWS::StackName}-dead-letter-queue
+
   SqsQueue:
     Type: AWS::SQS::Queue 
     Properties:
       QueueName: !Sub ${AWS::StackName}-queue
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt SqsDeadLetterQueue.Arn
+        maxReceiveCount: 3
 
   S3Bucket:
     Type: AWS::S3::Bucket

@@ -1,22 +1,27 @@
 """AWS SQS message producer."""
 from datetime import datetime
-import logging
+from logging import getLogger, INFO, StreamHandler
 from sys import argv
 from uuid import uuid4
 
-from producer import sqs_client
+from boto3 import client
 
 
-logging.basicConfig(level=logging.INFO)
+sqs_client = client("sqs")
+logger = getLogger("__name__")
+stream_handler = StreamHandler()
+
+stream_handler.setLevel(INFO)
+logger.addHandler(stream_handler)
+logger.setLevel(INFO)
 
 
 def generate_message_attributes():
     """Generate message attributes for messages."""
-    timestamp = datetime.now().strftime("%Y/%m/%d/%H/%M/%S")
-    key_prefix = {"DataType": "String", "StringValue": timestamp}
-    key = {"DataType": "String", "StringValue": str(uuid4())}
+    prefix = datetime.now().strftime("%Y%m%d%H%M")
+    key = str(uuid4())
 
-    yield {"key_prefix": key_prefix, "key": key}
+    yield {"key": {"DataType": "String", "StringValue": f"{prefix}/{key}"}}
 
 
 def generate_messages(queue_name, message_body, count=100):
@@ -31,9 +36,9 @@ def generate_messages(queue_name, message_body, count=100):
             MessageAttributes=next(generate_message_attributes()),
         )
 
-        logging.info(response)
+        logger.info(response)
 
 
 if __name__ == "__main__":
     for queue_name in argv[1:]:
-        generate_messages(queue_name, "Stuff", count=1)
+        generate_messages(queue_name, "Message Body")
