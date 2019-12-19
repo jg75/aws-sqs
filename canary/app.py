@@ -23,10 +23,11 @@ class LambdaHandler:
 
         yield {"key": {"DataType": "String", "StringValue": f"{prefix}/{key}"}}
 
-    def __init__(self, sqs_client, queue_url, **message_arguments):
+    def __init__(self, sqs_client, queue_url, generator=None, **message_arguments):
         """Override."""
         self.sqs_client = sqs_client
         self.queue_url = queue_url
+        self.generator = generator if generator else self.message_attributes_generator
         self.message_arguments = message_arguments
         self.logger = getLogger("__name__")
         stream_handler = StreamHandler()
