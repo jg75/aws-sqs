@@ -45,4 +45,4 @@ class LambdaHandler:
 
 
 s3_client = client("s3")
-lambda_handler = LambdaHandler(s3_client=s3_client, s3_bucket=getenv("S3_BUCKET"))
+handler = LambdaHandler(s3_client=s3_client, s3_bucket=getenv("S3_BUCKET"))
