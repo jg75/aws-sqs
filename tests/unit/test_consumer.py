@@ -12,11 +12,9 @@ def test_consumer(s3_stub, event, context):
     event = {"Records": []}
 
     for i in range(10):
-        event["Records"].append({
-            "messageAttributes": {
-                "key": {"stringValue": f"prefix/key{i}"}
-            }
-        })
+        event["Records"].append(
+            {"messageAttributes": {"key": {"stringValue": f"prefix/key{i}"}}}
+        )
 
         s3_stub.add_response(
             "put_object",
@@ -25,14 +23,13 @@ def test_consumer(s3_stub, event, context):
                 "Bucket": s3_bucket,
                 "Key": ANY,
                 "Expires": ANY,
-                "ContentType": "text/plain"
-            }
+                "ContentType": "text/plain",
+            },
         )
 
     with s3_stub:
         handler = consumer.app.LambdaHandler(
-            s3_client=consumer.app.s3_client,
-            s3_bucket=s3_bucket
+            s3_client=consumer.app.s3_client, s3_bucket=s3_bucket
         )
 
         handler(event, context)

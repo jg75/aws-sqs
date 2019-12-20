@@ -30,7 +30,7 @@ def test_message_attributes_generator():
         "StringList": "StringListValue",
         "Number": "StringValue",
         "Binary": "BinaryValue",
-        "BinaryList": "BinaryListValue"
+        "BinaryList": "BinaryListValue",
     }
 
     for attribute in attributes.values():
@@ -51,7 +51,7 @@ def test_canary(sqs_stub, event, context):
         message_count=message_count,
         message_body=message_body,
         message_prefix="prefix",
-        message_key="key"
+        message_key="key",
     )
 
     for _ in range(message_count):
@@ -61,8 +61,8 @@ def test_canary(sqs_stub, event, context):
             expected_params={
                 "QueueUrl": queue_url,
                 "MessageBody": message_body,
-                "MessageAttributes": next(handler.message_attributes_generator())
-            }
+                "MessageAttributes": next(handler.message_attributes_generator()),
+            },
         )
 
     with sqs_stub:
