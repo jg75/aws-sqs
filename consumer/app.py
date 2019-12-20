@@ -19,11 +19,11 @@ class LambdaHandler:
         """Get the key from the message attributes."""
         return record["messageAttributes"]["key"]["stringValue"]
 
-    def __init__(self, s3_client, s3_bucket, s3_object_ttl=timedelta(days=7)):
+    def __init__(self, s3_client, s3_bucket, s3_object_ttl=None):
         """Override."""
         self.s3_client = s3_client
         self.s3_bucket = s3_bucket
-        self.s3_object_ttl = s3_object_ttl
+        self.s3_object_ttl = s3_object_ttl if s3_object_ttl else timedelta(days=7)
         self.logger = getLogger("__name__")
         stream_handler = StreamHandler()
 

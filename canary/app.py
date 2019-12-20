@@ -3,7 +3,6 @@ from datetime import datetime
 from logging import getLogger, INFO, StreamHandler
 from os import getenv
 from uuid import uuid4
-
 from boto3 import client
 
 
