@@ -1,5 +1,5 @@
 aws-sam-cli==0.21.0
-black==19.3b0
+black==24.3.0
 boto3==1.10.40
 botocore==1.13.40
 pycodestyle==2.5.0
